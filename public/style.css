@@ -1,5 +1,5 @@
 body {
-    font-family: "Noto Sans SC", sans-serif;
+    font-family: "Noto Sans SC";
     background-color: #f4f7f6;
     color: #333;
     margin: 0;
@@ -20,7 +20,7 @@ body {
 }
 
 #message-input {
-    font-family: "Noto Sans SC", sans-serif;
+    font-family: "Noto Sans SC";
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
@@ -57,7 +57,7 @@ body {
 }
 
 .markdown-body code {
-    font-family: "Fira Code", monospace !important;
+    font-family: "Fira Code", "Noto Sans SC" !important;
 }
 
 .message-meta {
