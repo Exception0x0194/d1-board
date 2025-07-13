@@ -1,13 +1,22 @@
 /**
- * 处理 API 请求的 Worker
- * GET /api/messages/[board_id] - 获取留言
- * POST /api/messages/[board_id] - 新增留言
+ * 将 ArrayBuffer 转换为 Base64 字符串
+ * @param {ArrayBuffer} buffer
+ * @returns {string}
  */
+function bufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
 export async function onRequest(context) {
     const { request, env, params } = context;
-    const db = env.DB; // 从 context 中获取 D1 数据库绑定
+    const db = env.DB;
 
-    // 从路径参数中解析 board_id。因为是 [[board_id]]，所以它是一个数组。
     const boardId = params.board_id.join('/');
     if (!boardId) {
         return new Response('Missing board ID.', { status: 400 });
@@ -15,25 +24,36 @@ export async function onRequest(context) {
 
     try {
         if (request.method === 'GET') {
-            // 查询与 board_id 匹配的所有留言，并按时间倒序排列
-            const stmt = db.prepare('SELECT * FROM board_messages WHERE board_id = ? ORDER BY created_at DESC');
+            const stmt = db.prepare('SELECT id, board_id, content, created_at FROM board_messages WHERE board_id = ? ORDER BY created_at DESC');
             const { results } = await stmt.bind(boardId).all();
 
-            return new Response(JSON.stringify(results), {
+            // D1 返回的 BLOB 是 ArrayBuffer。我们需要将其转换为 Base64 才能放入 JSON。
+            const messagesWithBase64Content = results.map(msg => ({
+                ...msg,
+                content: bufferToBase64(msg.content), // 将 ArrayBuffer 转换为 Base64
+            }));
+
+            return new Response(JSON.stringify(messagesWithBase64Content), {
                 headers: { 'Content-Type': 'application/json' },
             });
         }
 
         if (request.method === 'POST') {
-            const { content } = await request.json();
+            // 检查 Content-Type，确保我们收到的是 gzip 压缩数据
+            if (request.headers.get('content-type') !== 'application/gzip') {
+                return new Response('Unsupported Media Type. Expecting application/gzip.', { status: 415 });
+            }
 
-            if (!content) {
+            // 直接读取请求体为 ArrayBuffer
+            const compressedContent = await request.arrayBuffer();
+
+            if (!compressedContent || compressedContent.byteLength === 0) {
                 return new Response('Missing message content.', { status: 400 });
             }
 
-            // 插入新留言
+            // 将压缩后的 ArrayBuffer (BLOB) 直接存入数据库
             const stmt = db.prepare('INSERT INTO board_messages (board_id, content, created_at) VALUES (?, ?, ?)');
-            await stmt.bind(boardId, content, new Date().toISOString()).run();
+            await stmt.bind(boardId, compressedContent, new Date().toISOString()).run();
 
             return new Response('Message posted successfully!', { status: 201 });
         }

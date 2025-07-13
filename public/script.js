@@ -4,14 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitButton = document.getElementById('submit-button');
     const messagesContainer = document.getElementById('messages-container');
 
-    // 从 URL 路径中解析出 board-id
-    // 例如，从 "/b/my-secret-board" 中解析出 "my-secret-board"
+    const base64ToUint8Array = (base64) => {
+        const binaryString = atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    };
+
     const getBoardIdFromPath = () => {
         const path = window.location.pathname;
         if (path.startsWith('/b/')) {
-            return path.substring(3); // 移除 '/b/'
+            return path.substring(3);
         }
-        // 如果是根路径，可以给个默认值或提示
         messagesContainer.innerHTML = '<p>请访问 <code>/b/你的留言板ID</code> 来查看或创建留言板。</p>';
         boardIdDisplay.textContent = '无';
         return null;
@@ -38,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 将留言数据渲染到页面上
     const renderMessages = (messages) => {
         messagesContainer.innerHTML = ''; // 清空容器
         if (messages.length === 0) {
@@ -47,13 +53,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         messages.forEach(msg => {
+            let originalContent = '';
+            try {
+                const compressedData = base64ToUint8Array(msg.content);
+                originalContent = pako.ungzip(compressedData, { to: 'string' });
+            } catch (e) {
+                console.error('解压失败:', e);
+                originalContent = '[内容解压失败]';
+            }
+
             const item = document.createElement('div');
             item.className = 'message-item';
 
             const contentDiv = document.createElement('div');
             contentDiv.className = 'markdown-body';
-            // 使用 DOMPurify 清理 Markdown 输出，防止 XSS
-            contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
+            contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(originalContent));
+
+            contentDiv.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
 
             const metaDiv = document.createElement('div');
             metaDiv.className = 'message-meta';
@@ -65,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             copyButton.className = 'copy-button';
             copyButton.textContent = '复制文本';
             copyButton.onclick = () => {
-                navigator.clipboard.writeText(msg.content)
+                navigator.clipboard.writeText(originalContent)
                     .then(() => {
                         copyButton.textContent = '已复制!';
                         setTimeout(() => { copyButton.textContent = '复制文本'; }, 2000);
@@ -81,9 +99,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             messagesContainer.appendChild(item);
         });
+
+        renderMathInElement(messagesContainer, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '\\[', right: '\\]', display: true }
+            ],
+            throwOnError: false
+        });
     };
 
-    // 处理提交按钮点击事件
     const handlePostMessage = async () => {
         if (!boardId) {
             alert('无效的留言板 ID！');
@@ -99,18 +126,22 @@ document.addEventListener('DOMContentLoaded', () => {
         submitButton.textContent = '提交中...';
 
         try {
+            const compressedContent = pako.gzip(content);
+
             const response = await fetch(`/api/messages/${boardId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content }),
+                headers: {
+                    'Content-Type': 'application/gzip',
+                },
+                body: compressedContent,
             });
 
             if (!response.ok) {
                 throw new Error(`提交失败: ${response.statusText}`);
             }
 
-            messageInput.value = ''; // 清空输入框
-            await fetchAndRenderMessages(); // 重新加载留言
+            messageInput.value = '';
+            await fetchAndRenderMessages();
 
         } catch (error) {
             console.error(error);
