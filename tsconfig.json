@@ -11,14 +11,13 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "types": [
-      "@cloudflare/workers-types"
-    ],
+    "types": [],
     "jsx": "preserve"
   },
   "include": [
     "functions/**/*.ts",
-    "public/**/*.ts"
+    "public/**/*.ts",
+    "*.ts"
   ],
   "exclude": [
     "node_modules"

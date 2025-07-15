@@ -30,7 +30,7 @@ body {
     font-size: 16px;
 }
 
-#submit-button {
+#submit-button, #attach-file-button {
     display: block;
     width: 100%;
     padding: 12px;
@@ -44,8 +44,16 @@ body {
     transition: background-color 0.2s;
 }
 
-#submit-button:hover {
+#submit-button:hover, #attach-file-button:hover {
     background-color: #0056b3;
+}
+
+#attach-file-button {
+    background-color: #6c757d;
+}
+
+#attach-file-button:hover {
+    background-color: #5a6268;
 }
 
 .message-item {
@@ -80,4 +88,40 @@ body {
 
 .copy-button:hover {
     background-color: #5a6268;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.attachment-area {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.attachment-info {
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: #555;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.attachment-info button {
+    margin-left: 10px;
+    font-size: 0.8em;
+    padding: 2px 5px;
+    background-color: #dc3545;
+}
+
+.attachment-link {
+    margin-left: 15px;
+    color: #0366d6;
+    text-decoration: none;
+}
+
+.attachment-link:hover {
+    text-decoration: underline;
 }

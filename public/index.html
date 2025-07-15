@@ -23,6 +23,11 @@
 
         <div class="form-container">
             <textarea id="message-input" placeholder="输入你的留言 (支持 Markdown)..." rows="5"></textarea>
+            <div class="attachment-area">
+                <input type="file" id="file-input" style="display: none;">
+                <button id="attach-file-button">添加附件</button>
+                <div id="attachment-info" class="attachment-info"></div>
+            </div>
             <button id="submit-button">提交</button>
         </div>
 

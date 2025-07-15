@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageInput = document.getElementById('message-input');
     const submitButton = document.getElementById('submit-button');
     const messagesContainer = document.getElementById('messages-container');
+    const attachFileButton = document.getElementById('attach-file-button');
+    const fileInput = document.getElementById('file-input');
+    const attachmentInfo = document.getElementById('attachment-info');
+    let selectedFile = null;
     const base64ToUint8Array = (base64) => {
         const binaryString = atob(base64);
         const len = binaryString.length;
@@ -23,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
     const boardId = getBoardIdFromPath();
-    // 获取并渲染留言
     const fetchAndRenderMessages = async () => {
         if (!boardId)
             return;
@@ -43,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const renderMessages = (messages) => {
-        messagesContainer.innerHTML = ''; // 清空容器
+        messagesContainer.innerHTML = '';
         if (messages.length === 0) {
             messagesContainer.innerHTML = '<p>这里还没有留言，快来发布第一条吧！</p>';
             return;
@@ -51,12 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
         messages.forEach(msg => {
             let originalContent = '';
             try {
+                // Assuming content is gzipped and base64 encoded on the server
                 const compressedData = base64ToUint8Array(msg.content);
                 originalContent = pako.ungzip(compressedData, { to: 'string' });
             }
             catch (e) {
-                console.error('解压失败:', e);
-                originalContent = '[内容解压失败]';
+                // Fallback for non-gzipped or plain text content for backward compatibility
+                originalContent = msg.content;
             }
             const item = document.createElement('div');
             item.className = 'message-item';
@@ -83,6 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             metaDiv.appendChild(timeSpan);
             metaDiv.appendChild(copyButton);
+            if (msg.has_attachment) {
+                const attachmentLink = document.createElement('a');
+                attachmentLink.href = '#';
+                attachmentLink.textContent = `下载附件: ${msg.filename}`;
+                attachmentLink.className = 'attachment-link';
+                attachmentLink.onclick = (e) => {
+                    e.preventDefault();
+                    handleDownload(msg.r2_key, msg.filename);
+                };
+                metaDiv.appendChild(attachmentLink);
+            }
             item.appendChild(contentDiv);
             item.appendChild(metaDiv);
             messagesContainer.appendChild(item);
@@ -97,31 +112,77 @@ document.addEventListener('DOMContentLoaded', () => {
             throwOnError: false
         });
     };
+    const handleDownload = async (r2Key, filename) => {
+        try {
+            const response = await fetch(`/api/attachments/download?key=${r2Key}`);
+            if (!response.ok)
+                throw new Error('获取下载链接失败');
+            const { presignedUrl } = await response.json();
+            // 创建一个临时的 a 标签来触发下载
+            const link = document.createElement('a');
+            link.href = presignedUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        catch (error) {
+            console.error('下载失败:', error);
+            alert(error.message);
+        }
+    };
     const handlePostMessage = async () => {
         if (!boardId) {
             alert('无效的留言板 ID！');
             return;
         }
         const content = messageInput.value.trim();
-        if (!content) {
-            alert('留言内容不能为空！');
+        if (!content && !selectedFile) {
+            alert('留言内容和附件不能都为空！');
             return;
         }
         submitButton.disabled = true;
         submitButton.textContent = '提交中...';
         try {
+            let attachmentData = null;
+            if (selectedFile) {
+                submitButton.textContent = '正在上传附件...';
+                // 1. 获取预签名 URL
+                const uploadResponse = await fetch('/api/attachments/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        boardId: boardId,
+                        fileName: selectedFile.name,
+                        contentType: selectedFile.type
+                    }),
+                });
+                if (!uploadResponse.ok)
+                    throw new Error('获取上传URL失败');
+                const { presignedUrl, r2Key } = await uploadResponse.json();
+                // 2. 上传文件到 R2
+                await fetch(presignedUrl, { method: 'PUT', body: selectedFile });
+                attachmentData = { r2Key: r2Key, filename: selectedFile.name };
+            }
+            submitButton.textContent = '正在提交留言...';
             const compressedContent = pako.gzip(content);
+            const contentBase64 = btoa(String.fromCharCode.apply(null, Array.from(compressedContent)));
+            const postBody = {
+                content: contentBase64,
+                attachment: attachmentData
+            };
             const response = await fetch(`/api/messages/${boardId}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/gzip',
-                },
-                body: compressedContent,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(postBody),
             });
             if (!response.ok) {
                 throw new Error(`提交失败: ${response.statusText}`);
             }
             messageInput.value = '';
+            fileInput.value = '';
+            selectedFile = null;
+            updateAttachmentInfo();
             await fetchAndRenderMessages();
         }
         catch (error) {
@@ -133,6 +194,33 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = '提交';
         }
     };
+    const updateAttachmentInfo = () => {
+        if (selectedFile) {
+            attachmentInfo.textContent = `已选择文件: ${selectedFile.name}`;
+            const removeButton = document.createElement('button');
+            removeButton.textContent = '移除';
+            removeButton.onclick = () => {
+                selectedFile = null;
+                fileInput.value = ''; // 清空 file input
+                updateAttachmentInfo();
+            };
+            attachmentInfo.appendChild(removeButton);
+        }
+        else {
+            attachmentInfo.textContent = '';
+        }
+    };
+    attachFileButton.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (event) => {
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            selectedFile = files[0];
+            updateAttachmentInfo();
+        }
+        else {
+            selectedFile = null;
+        }
+    });
     submitButton.addEventListener('click', handlePostMessage);
     // 初始加载
     fetchAndRenderMessages();
