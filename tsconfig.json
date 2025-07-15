@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "types": [
+      "@cloudflare/workers-types"
+    ],
+    "jsx": "preserve"
+  },
+  "include": [
+    "functions/**/*.ts",
+    "public/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
