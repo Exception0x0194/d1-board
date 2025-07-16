@@ -61,7 +61,8 @@ body {
     border-radius: 6px;
     padding: 15px;
     margin-bottom: 15px;
-    position: relative;
+    position: relative; /* Required for absolute positioning of the copy button */
+    padding-bottom: 40px; /* Add padding to the bottom to avoid overlapping with the copy button */
 }
 
 .markdown-body code {
@@ -71,12 +72,37 @@ body {
 .message-meta {
     font-size: 12px;
     color: #888;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    margin-top: 15px;
+}
+
+.attachment-container {
+    margin-bottom: 8px; /* Space between attachment and timestamp */
+}
+
+.attachment-link {
+    color: #0366d6;
+    text-decoration: none;
+    margin-right: 8px;
+}
+
+.attachment-link:hover {
+    text-decoration: underline;
+}
+
+.attachment-expiry {
+    font-size: 11px;
+    color: #d9534f; /* A slightly more prominent color */
+    font-weight: 500;
+}
+
+.timestamp {
+    display: block; /* Ensure timestamp is on its own line */
 }
 
 .copy-button {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
     background-color: #6c757d;
     color: white;
     border: none;
@@ -84,6 +110,7 @@ body {
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
+    transition: background-color 0.2s;
 }
 
 .copy-button:hover {
@@ -112,16 +139,26 @@ button:disabled {
 .attachment-info button {
     margin-left: 10px;
     font-size: 0.8em;
-    padding: 2px 5px;
+    padding: 3px 8px;
     background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.attachment-link {
-    margin-left: 15px;
-    color: #0366d6;
-    text-decoration: none;
+.attachment-info button:hover {
+    background-color: #c82333;
 }
 
-.attachment-link:hover {
-    text-decoration: underline;
+h1, h2 {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 1.2em;
+    color: #555;
 }

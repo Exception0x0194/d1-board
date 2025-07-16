@@ -10,7 +10,7 @@ export const onRequestGet = async (context) => {
     try {
         const s3 = new S3Client({
             region: 'auto',
-            endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+            endpoint: env.R2_S3_ENDPOINT,
             credentials: {
                 accessKeyId: env.R2_ACCESS_KEY_ID,
                 secretAccessKey: env.R2_SECRET_ACCESS_KEY,

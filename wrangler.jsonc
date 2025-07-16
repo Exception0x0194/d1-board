@@ -18,6 +18,7 @@
 		}
 	],
 	"vars": {
+		"R2_S3_ENDPOINT": "https://25a4b25d37ba7ee02cceb15bc22cc5ed.r2.cloudflarestorage.com",
 		"BUCKET_NAME": "pages",
 	}
 }

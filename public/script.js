@@ -72,8 +72,39 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const metaDiv = document.createElement('div');
             metaDiv.className = 'message-meta';
+            if (msg.has_attachment) {
+                const attachmentContainer = document.createElement('div');
+                attachmentContainer.className = 'attachment-container';
+                const attachmentLink = document.createElement('a');
+                attachmentLink.href = '#';
+                attachmentLink.textContent = `下载附件: ${msg.filename}`;
+                attachmentLink.className = 'attachment-link';
+                attachmentLink.onclick = (e) => {
+                    e.preventDefault();
+                    handleDownload(msg.r2_key, msg.filename);
+                };
+                attachmentContainer.appendChild(attachmentLink);
+                const expirySpan = document.createElement('span');
+                expirySpan.className = 'attachment-expiry';
+                const createdAt = new Date(msg.created_at);
+                const expiryDate = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000); // 1 day later
+                const now = new Date();
+                const remainingMillis = expiryDate.getTime() - now.getTime();
+                if (remainingMillis > 0) {
+                    const remainingHours = Math.floor(remainingMillis / (1000 * 60 * 60));
+                    const remainingMinutes = Math.floor((remainingMillis % (1000 * 60 * 60)) / (1000 * 60));
+                    expirySpan.textContent = `(还剩 ${remainingHours} 小时 ${remainingMinutes} 分钟)`;
+                }
+                else {
+                    expirySpan.textContent = '(已过期)';
+                }
+                attachmentContainer.appendChild(expirySpan);
+                metaDiv.appendChild(attachmentContainer);
+            }
             const timeSpan = document.createElement('span');
+            timeSpan.className = 'timestamp';
             timeSpan.textContent = `发布于: ${new Date(msg.created_at).toLocaleString()}`;
+            metaDiv.appendChild(timeSpan);
             const copyButton = document.createElement('button');
             copyButton.className = 'copy-button';
             copyButton.textContent = '复制文本';
@@ -85,20 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                     .catch(err => console.error('复制失败: ', err));
             };
-            metaDiv.appendChild(timeSpan);
-            metaDiv.appendChild(copyButton);
-            if (msg.has_attachment) {
-                const attachmentLink = document.createElement('a');
-                attachmentLink.href = '#';
-                attachmentLink.textContent = `下载附件: ${msg.filename}`;
-                attachmentLink.className = 'attachment-link';
-                attachmentLink.onclick = (e) => {
-                    e.preventDefault();
-                    handleDownload(msg.r2_key, msg.filename);
-                };
-                metaDiv.appendChild(attachmentLink);
-            }
             item.appendChild(contentDiv);
+            item.appendChild(copyButton);
             item.appendChild(metaDiv);
             messagesContainer.appendChild(item);
         });
@@ -154,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         boardId: boardId,
                         fileName: selectedFile.name,
-                        contentType: selectedFile.type
+                        contentType: selectedFile.type || 'application/octet-stream '
                     }),
                 });
                 if (!uploadResponse.ok)
