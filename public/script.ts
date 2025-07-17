@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const postBody = {
                 content: contentBase64,
-                attachment: attachmentData
+                ...(attachmentData ? { attachmentData: attachmentData } : {})
             };
 
             const response = await fetch(`/api/messages/${boardId}`, {

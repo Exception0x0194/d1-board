@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentBase64 = btoa(String.fromCharCode.apply(null, Array.from(compressedContent)));
             const postBody = {
                 content: contentBase64,
-                attachment: attachmentData
+                ...(attachmentData ? { attachmentData: attachmentData } : {})
             };
             const response = await fetch(`/api/messages/${boardId}`, {
                 method: 'POST',
